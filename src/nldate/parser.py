@@ -180,6 +180,30 @@ def _resolve_anchor(s: str, today: date) -> date | None:
         return today + timedelta(days=1)
     if s == "yesterday":
         return today - timedelta(days=1)
+    if s in ("the day after tomorrow", "day after tomorrow"):
+        return today + timedelta(days=2)
+    if s in ("the day before yesterday", "day before yesterday"):
+        return today - timedelta(days=2)
+    m = re.match(r"^(next|last|this)\s+(\w+)$", s)
+    if m:
+        rel = m.group(1)
+        name = m.group(2)
+        if name in WEEKDAYS:
+            if rel == "last":
+                return _last_weekday(today, WEEKDAYS[name])
+            return _next_weekday(today, WEEKDAYS[name])
+    if s == "next week":
+        return today + timedelta(weeks=1)
+    if s == "last week":
+        return today - timedelta(weeks=1)
+    if s == "next month":
+        return _add_months(today, 1)
+    if s == "last month":
+        return _add_months(today, -1)
+    if s == "next year":
+        return _add_years(today, 1)
+    if s == "last year":
+        return _add_years(today, -1)
     return _try_parse_absolute(s, today)
 
 
@@ -194,7 +218,10 @@ def _try_parse_absolute(s: str, today: date) -> date | None:
     m = re.match(r"^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$", s)
     if m:
         return date(int(m.group(3)), int(m.group(1)), int(m.group(2)))
-    s_lower = s.lower().strip().rstrip(".")
+    m = re.match(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})$", s)
+    if m:
+        return date(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+    s_lower = s.lower().strip().replace(".", "")
     m = re.match(r"^([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{4})$", s_lower)
     if m and m.group(1) in MONTHS:
         return date(int(m.group(3)), MONTHS[m.group(1)], int(m.group(2)))
@@ -230,6 +257,16 @@ def _try_parse_absolute(s: str, today: date) -> date | None:
         day_val = _parse_ordinal(m.group(2))
         if day_val:
             return date(today.year, MONTHS[m.group(1)], day_val)
+    m = re.match(r"^([a-z]+)\s+the\s+(\w+(?:-\w+)?),?\s*(\d{4})$", s_lower)
+    if m and m.group(1) in MONTHS:
+        day_val = _parse_ordinal(m.group(2))
+        if day_val:
+            return date(int(m.group(3)), MONTHS[m.group(1)], day_val)
+    m = re.match(r"^([a-z]+)\s+the\s+(\w+(?:-\w+)?)$", s_lower)
+    if m and m.group(1) in MONTHS:
+        day_val = _parse_ordinal(m.group(2))
+        if day_val:
+            return date(today.year, MONTHS[m.group(1)], day_val)
     return None
 
 
@@ -242,7 +279,8 @@ def _parse_duration_parts(s: str) -> tuple[int, int, int, int]:
     for m in re.finditer(
         r"(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
         r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
-        r"eighteen|nineteen|twenty|thirty|forty|fifty)\s+"
+        r"eighteen|nineteen|twenty|thirty|forty|fifty|"
+        r"sixty|seventy|eighty|ninety)\s+"
         r"(year|month|week|day|yr|mo)s?",
         s,
     ):
@@ -302,7 +340,8 @@ def parse(s: str, today: date | None = None) -> date:
     m = re.match(
         r"^(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
         r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
-        r"eighteen|nineteen|twenty|thirty|forty|fifty)"
+        r"eighteen|nineteen|twenty|thirty|forty|fifty|"
+        r"sixty|seventy|eighty|ninety)"
         r"\s+(year|month|week|day|yr|mo)s?\s+ago$",
         s_lower,
     )
@@ -322,7 +361,8 @@ def parse(s: str, today: date | None = None) -> date:
     m = re.match(
         r"^in\s+(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|"
         r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
-        r"eighteen|nineteen|twenty|thirty|forty|fifty)"
+        r"eighteen|nineteen|twenty|thirty|forty|fifty|"
+        r"sixty|seventy|eighty|ninety)"
         r"\s+(year|month|week|day|yr|mo)s?$",
         s_lower,
     )
