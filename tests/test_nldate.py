@@ -56,7 +56,9 @@ def test_2_weeks_ago() -> None:
 
 
 def test_year_and_months_after() -> None:
-    assert parse("1 year and 2 months after yesterday", today=TODAY) == date(2026, 8, 14)
+    assert parse("1 year and 2 months after yesterday", today=TODAY) == date(
+        2026, 8, 14
+    )
 
 
 def test_from_tomorrow() -> None:
